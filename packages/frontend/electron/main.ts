@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, Tray, Menu, nativeImage } from "electron";
 // import { createRequire } from 'node:module'
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -27,6 +27,9 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
   : RENDERER_DIST;
 
 let win: BrowserWindow | null;
+let tray: Tray | null = null;
+// "앱이 종료를 진행 중인지"를 추적하기 위한 변수
+let isQuitting: boolean = false;
 
 function createWindow() {
   win = new BrowserWindow({
@@ -41,6 +44,13 @@ function createWindow() {
     win?.webContents.send("main-process-message", new Date().toLocaleString());
   });
 
+  win.on("close", (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      win?.hide();
+    }
+  });
+
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL);
   } else {
@@ -49,22 +59,56 @@ function createWindow() {
   }
 }
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-    win = null;
-  }
+function createTray(): void {
+  // 트레이 아이콘 경로 지정
+  const iconPath = path.join(process.env.VITE_PUBLIC, "tray.png");
+  const trayIcon = nativeImage.createFromPath(iconPath);
+
+  // Tray 생성
+  tray = new Tray(trayIcon);
+  tray.setToolTip("My Electron App");
+
+  // Tray 우클릭 메뉴
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: "Show App",
+      click: () => {
+        win?.show();
+      },
+    },
+    {
+      label: "Quit",
+      click: () => {
+        // 여기서만 실제로 앱을 종료하도록
+        isQuitting = true;
+        app.quit();
+      },
+    },
+  ]);
+  tray.setContextMenu(contextMenu);
+
+  // 트레이 아이콘을 더블클릭했을 때 메인 윈도우 보이기
+  tray.on("double-click", () => {
+    win?.show();
+  });
+}
+
+app.whenReady().then(() => {
+  createWindow();
+  createTray();
+  app.on("activate", () => {
+    // On OS X it's common to re-create a window in the app when the
+    // dock icon is clicked and there are no other windows open.
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    } else {
+      win?.show();
+    }
+  });
 });
 
-app.on("activate", () => {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+// 모든 창이 닫혀도 완전히 종료하지 않으려면 아래처럼 처리 가능
+app.on("window-all-closed", (event: { preventDefault: () => void }) => {
+  // Windows, Linux 등에서 기본적으로 app.quit()이 실행되지 않도록
+  event.preventDefault();
 });
-
-app.whenReady().then(createWindow);
