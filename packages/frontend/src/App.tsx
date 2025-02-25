@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { PROTOCOL, SSE_SERVER_URL } from "./constants/common";
-
+import "./App.css";
 function App() {
   const [userId, setUserId] = useState<string>("");
   const [enableLog, setEnableLog] = useState(false);
@@ -35,7 +35,15 @@ function App() {
       const parsedData = JSON.parse(event.data);
       // 데스크톱(브라우저) 알림
       if (Notification.permission === "granted") {
-        new Notification(parsedData.event, { body: parsedData.message });
+        const noti = new Notification(parsedData.event, {
+          body: parsedData.message,
+        });
+        noti.onclick = (e) => {
+          e.preventDefault();
+          if (parsedData.url) {
+            window.open(parsedData.url, "_blank");
+          }
+        };
       }
     };
 
@@ -77,7 +85,12 @@ function App() {
           onChange={(e) => setUserId(e.target.value)}
           style={{ marginRight: "0.5rem" }}
         />
-        <button onClick={handleConnect}>Connect</button>
+        <button
+          onClick={handleConnect}
+          className={eventSource === null ? "ready" : "connected"}
+        >
+          {eventSource === null ? "Connect" : "Connected"}
+        </button>
         <button onClick={handleDisconnect} style={{ marginLeft: "0.5rem" }}>
           Disconnect
         </button>
