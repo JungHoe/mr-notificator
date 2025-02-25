@@ -3,7 +3,7 @@ import { PROTOCOL, SSE_SERVER_URL } from "./constants/common";
 
 function App() {
   const [userId, setUserId] = useState<string>("");
-  const [enableLog, setEnableLog] = useState(true);
+  const [enableLog, setEnableLog] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [eventSource, setEventSource] = useState<EventSource | null>(null);
 
@@ -32,9 +32,10 @@ function App() {
       if (enableLog) {
         setLog((prev) => [...prev, event.data]);
       }
+      const parsedData = JSON.parse(event.data);
       // 데스크톱(브라우저) 알림
       if (Notification.permission === "granted") {
-        new Notification(event.data.event, { body: event.data.message });
+        new Notification(parsedData.event, { body: parsedData.message });
       }
     };
 
