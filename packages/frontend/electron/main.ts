@@ -93,22 +93,29 @@ function createTray(): void {
   });
 }
 
-app.whenReady().then(() => {
-  createWindow();
-  createTray();
-  app.on("activate", () => {
-    // On OS X it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    } else {
-      win?.show();
-    }
+// 1) 단일 인스턴스 락 요청
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  // 이미 락을 획득한 인스턴스가 있다면, 현재 프로세스를 종료
+  app.quit();
+} else {
+  app.whenReady().then(() => {
+    createWindow();
+    createTray();
+    app.on("activate", () => {
+      // On OS X it's common to re-create a window in the app when the
+      // dock icon is clicked and there are no other windows open.
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow();
+      } else {
+        win?.show();
+      }
+    });
   });
-});
 
-// 모든 창이 닫혀도 완전히 종료하지 않으려면 아래처럼 처리 가능
-app.on("window-all-closed", (event: { preventDefault: () => void }) => {
-  // Windows, Linux 등에서 기본적으로 app.quit()이 실행되지 않도록
-  event.preventDefault();
-});
+  // 모든 창이 닫혀도 완전히 종료하지 않으려면 아래처럼 처리 가능
+  app.on("window-all-closed", (event: { preventDefault: () => void }) => {
+    // Windows, Linux 등에서 기본적으로 app.quit()이 실행되지 않도록
+    event.preventDefault();
+  });
+}
