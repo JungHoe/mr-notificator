@@ -1,7 +1,19 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, shell } from "electron";
+import {
+  app,
+  BrowserWindow,
+  Tray,
+  Menu,
+  nativeImage,
+  shell,
+  ipcMain,
+} from "electron";
 // import { createRequire } from 'node:module'
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import Store from "electron-store";
+
+// 1) electron-store 생성
+const store = new Store();
 
 // const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -35,6 +47,9 @@ function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
+      // 보안 권장
+      contextIsolation: true,
+      nodeIntegration: false,
       preload: path.join(__dirname, "preload.mjs"),
     },
   });
@@ -71,7 +86,7 @@ function createTray(): void {
 
   // Tray 생성
   tray = new Tray(trayIcon);
-  tray.setToolTip("My Electron App");
+  tray.setToolTip("Notificator");
 
   // Tray 우클릭 메뉴
   const contextMenu = Menu.buildFromTemplate([
@@ -125,3 +140,16 @@ if (!gotTheLock) {
     event.preventDefault();
   });
 }
+
+// IPC: 저장 요청
+ipcMain.on("save-data", (event, data: string) => {
+  store.set("alertList", data);
+  console.log("[main.ts] alertList saved:", data);
+});
+
+// IPC: 로드 요청
+ipcMain.handle("load-data", () => {
+  const savedData = store.get("alertList", "");
+  console.log("[main.ts] alertList loaded:", savedData);
+  return savedData;
+});
