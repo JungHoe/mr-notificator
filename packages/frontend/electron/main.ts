@@ -102,6 +102,7 @@ if (!gotTheLock) {
   app.whenReady().then(() => {
     createWindow();
     createTray();
+    app.setAppUserModelId("com.mycompany.myapp");
     app.on("activate", () => {
       // On OS X it's common to re-create a window in the app when the
       // dock icon is clicked and there are no other windows open.
